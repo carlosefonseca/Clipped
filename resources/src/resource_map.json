@@ -1,0 +1,67 @@
+
+{"friendlyVersion": "1.0",
+    "versionDefName": "APP_RESOURCES",
+    "media":
+    [
+     {
+     "type":     "png",
+     "defName":  "IMAGE_MENU_ICON",
+     "file":     "images/menu_icon.png"
+     },
+     {
+     "type":     "font",
+     "defName":  "FONT_BORIS_40",
+     "file":     "fonts/BorisBlackBloxx.ttf"
+     },
+     {
+     "type":     "png",
+     "defName":  "IMAGE_H0",
+     "file":     "images/h0.png"
+     },
+     {
+     "type":     "png",
+     "defName":  "IMAGE_H1",
+     "file":     "images/h1.png"
+     },
+     {
+     "type":     "png",
+     "defName":  "IMAGE_H2",
+     "file":     "images/h2.png"
+     },
+     {
+     "type":     "png",
+     "defName":  "IMAGE_H3",
+     "file":     "images/h3.png"
+     },
+     {
+     "type":     "png",
+     "defName":  "IMAGE_H4",
+     "file":     "images/h4.png"
+     },
+     {
+     "type":     "png",
+     "defName":  "IMAGE_H5",
+     "file":     "images/h5.png"
+     },
+     {
+     "type":     "png",
+     "defName":  "IMAGE_H6",
+     "file":     "images/h6.png"
+     },
+     {
+     "type":     "png",
+     "defName":  "IMAGE_H7",
+     "file":     "images/h7.png"
+     },
+     {
+     "type":     "png",
+     "defName":  "IMAGE_H8",
+     "file":     "images/h8.png"
+     },
+     {
+     "type":     "png",
+     "defName":  "IMAGE_H9",
+     "file":     "images/h9.png"
+     }
+     ]
+}
