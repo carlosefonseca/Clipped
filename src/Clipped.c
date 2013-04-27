@@ -6,7 +6,7 @@
 #define MY_UUID { 0xB4, 0x6D, 0x25, 0x42, 0x6F, 0x7D, 0x46, 0x2C, 0x87, 0x9B, 0xE2, 0x1A, 0xE0, 0xDD, 0x69, 0xEF }
 PBL_APP_INFO(MY_UUID,
              "Clipped", "Jnm",
-             1, 0, /* App version */
+             1, 1, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON,
              APP_INFO_WATCH_FACE);
 
@@ -18,8 +18,18 @@ PBL_APP_INFO(MY_UUID,
 #define TEXTY 95
 #define TEXTW 143
 #define TEXTH 60
+
+#define LANG_DUTCH 0
+#define LANG_ENGLISH 1
+#define LANG_FRENCH 2
+#define LANG_GERMAN 3
+#define LANG_SPANISH 4
+#define LANG_MAX 5
+
 #define USDATE false
 #define WEEKDAY true
+#define LANG_CUR LANG_ENGLISH
+
 
 const int hourImage[10] = {
     RESOURCE_ID_IMAGE_H0, RESOURCE_ID_IMAGE_H1, RESOURCE_ID_IMAGE_H2, RESOURCE_ID_IMAGE_H3,
@@ -28,11 +38,13 @@ const int hourImage[10] = {
 };
 
 
-//const char weekDay[7][3] = { "Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za" };	// Dutch
-const char weekDay[7][3] = { "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" };	// English
-//const char weekDay[7][3] = { "Di", "Lu", "Ma", "Me", "Je", "Ve", "Sa" };	// French
-//const char weekDay[7][3] = { "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" };	// German
-//const char weekDay[7][3] = { "Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa" };	// Spanish
+const char weekDay[LANG_MAX][7][2] = {
+	{ "Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za" },	// Dutch
+	{ "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" },	// English
+	{ "Di", "Lu", "Ma", "Me", "Je", "Ve", "Sa" },	// French
+	{ "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" },	// German
+	{ "Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa" }	// Spanish
+};
 
 Window window;
 Layer bgLayer;
@@ -94,8 +106,8 @@ void setHM(PblTm *tm) {
     minutes[1] = '0' + (char)m2;
 
 	if (WEEKDAY) {
-			date[0] = weekDay[wd][0];
-			date[1] = weekDay[wd][1];
+			date[0] = weekDay[LANG_CUR][wd][0];
+			date[1] = weekDay[LANG_CUR][wd][1];
 			date[3] = '0' + (char)D1;
 			date[4] = '0' + (char)D2;
 	} else {
