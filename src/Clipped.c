@@ -36,27 +36,31 @@ bool clock12 = false;
 int dx[5] = { -1, 1, 1, -1, 0 };
 int dy[5] = { -1, -1, 1, 1, 0 };
 GColor textColor[5] = { GColorWhite, GColorWhite, GColorWhite, GColorWhite, GColorBlack };
-
-BmpContainer hourBmpContainer[10];
-
+BmpContainer hourBmpContainer[2];
 
 void updateLayer(Layer *me, GContext* ctx) {
     GRect frameH1, frameH2;
     int hourWidth;
     
-    frameH1 = layer_get_frame(&hourBmpContainer[h1].layer.layer);
-    frameH2 = layer_get_frame(&hourBmpContainer[h2].layer.layer);
+	bmp_init_container(hourImage[h1], &hourBmpContainer[0]);
+	bmp_init_container(hourImage[h2], &hourBmpContainer[1]);
+
+    frameH1 = layer_get_frame(&hourBmpContainer[0].layer.layer);
+    frameH2 = layer_get_frame(&hourBmpContainer[1].layer.layer);
     hourWidth = frameH1.size.w + frameH2.size.w + 8;
     
     // tens hour digit
     frameH1.origin.x = CX - hourWidth/2;
     frameH1.origin.y = 1;
-    graphics_draw_bitmap_in_rect(ctx, &hourBmpContainer[h1].bmp, frameH1);
+    graphics_draw_bitmap_in_rect(ctx, &hourBmpContainer[0].bmp, frameH1);
     
     // units hour digit
     frameH2.origin.x = frameH1.origin.x + frameH1.size.w + 4;
     frameH2.origin.y = 1;
-    graphics_draw_bitmap_in_rect(ctx, &hourBmpContainer[h2].bmp, frameH2);
+    graphics_draw_bitmap_in_rect(ctx, &hourBmpContainer[1].bmp, frameH2);
+
+	bmp_deinit_container(&hourBmpContainer[0]);
+	bmp_deinit_container(&hourBmpContainer[1]);
 }
 
 void setHM(PblTm *tm) {
@@ -85,9 +89,9 @@ void setHM(PblTm *tm) {
 
 void handle_tick(AppContextRef ctx, PebbleTickEvent *evt) {
     PblTm now;
+
     get_time(&now);
 	setHM(&now);
-    //text_layer_set_text(&minuteLayer[i], minutes);
     layer_mark_dirty(&bgLayer);
 }
 
@@ -101,7 +105,6 @@ void handle_init(AppContextRef ctx) {
     
     resource_init_current_app(&APP_RESOURCES);
 
-    //minuteFont = fonts_get_system_font(FONT_KEY_GOTHAM_42_MEDIUM_NUMBERS);
     minuteFont = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BORIS_40));
     
 	clock12 = !clock_is_24h_style();
@@ -109,10 +112,6 @@ void handle_init(AppContextRef ctx) {
     get_time(&now);
 	setHM(&now);
 
-    for (i=0; i<10; i++) {
-        bmp_init_container(hourImage[i], &hourBmpContainer[i]);
-    }
-    
     layer_init(&bgLayer, window.layer.frame);
     bgLayer.update_proc = &updateLayer;
     layer_add_child(&window.layer, &bgLayer);
@@ -137,11 +136,8 @@ void handle_init(AppContextRef ctx) {
 }
 
 void handle_deinit(AppContextRef ctx) {
-    int i;
-        
-    for (i=0; i<10; i++) {
-        bmp_deinit_container(&hourBmpContainer[i]);
-    }
+    bmp_deinit_container(&hourBmpContainer[0]);
+    bmp_deinit_container(&hourBmpContainer[1]);
 }
 
 void pbl_main(void *params) {
