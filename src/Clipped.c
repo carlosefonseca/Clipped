@@ -164,6 +164,7 @@ void handle_init(AppContextRef ctx) {
 void handle_deinit(AppContextRef ctx) {
     bmp_deinit_container(&hourBmpContainer[0]);
     bmp_deinit_container(&hourBmpContainer[1]);
+    fonts_unload_custom_font(minuteFont);
 }
 
 void pbl_main(void *params) {
