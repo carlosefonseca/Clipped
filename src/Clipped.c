@@ -18,6 +18,8 @@ PBL_APP_INFO(MY_UUID,
 #define TEXTY 95
 #define TEXTW 143
 #define TEXTH 60
+#define USDATE false
+#define WEEKDAY true
 
 const int hourImage[10] = {
     RESOURCE_ID_IMAGE_H0, RESOURCE_ID_IMAGE_H1, RESOURCE_ID_IMAGE_H2, RESOURCE_ID_IMAGE_H3,
@@ -25,13 +27,20 @@ const int hourImage[10] = {
     RESOURCE_ID_IMAGE_H8, RESOURCE_ID_IMAGE_H9
 };
 
+
+//const char weekDay[7][3] = { "Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za" };	// Dutch
+const char weekDay[7][3] = { "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" };	// English
+//const char weekDay[7][3] = { "Di", "Lu", "Ma", "Me", "Je", "Ve", "Sa" };	// French
+//const char weekDay[7][3] = { "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" };	// German
+//const char weekDay[7][3] = { "Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa" };	// Spanish
+
 Window window;
 Layer bgLayer;
 TextLayer minuteLayer[5], dateLayer;
 GFont minuteFont;
 char minutes[] = "01";
 char date[] = "01 34";
-int h1, h2, m1, m2, D1, D2, M1, M2, Y1, Y2;
+int h1, h2, m1, m2, D1, D2, M1, M2, wd;
 bool clock12 = false;
 int dx[5] = { -1, 1, 1, -1, 0 };
 int dy[5] = { -1, -1, 1, 1, 0 };
@@ -79,12 +88,29 @@ void setHM(PblTm *tm) {
     D2 = tm->tm_mday%10;
     M1 = (tm->tm_mon+1)/10;
     M2 = (tm->tm_mon+1)%10;
+	wd = tm->tm_wday;
+
     minutes[0] = '0' + (char)m1;
     minutes[1] = '0' + (char)m2;
-	date[0] = '0' + (char)D1;
-	date[1] = '0' + (char)D2;
-	date[3] = '0' + (char)M1;
-	date[4] = '0' + (char)M2;
+
+	if (WEEKDAY) {
+			date[0] = weekDay[wd][0];
+			date[1] = weekDay[wd][1];
+			date[3] = '0' + (char)D1;
+			date[4] = '0' + (char)D2;
+	} else {
+		if (USDATE) {
+			date[0] = '0' + (char)M1;
+			date[1] = '0' + (char)M2;
+			date[3] = '0' + (char)D1;
+			date[4] = '0' + (char)D2;
+		} else {
+			date[0] = '0' + (char)D1;
+			date[1] = '0' + (char)D2;
+			date[3] = '0' + (char)M1;
+			date[4] = '0' + (char)M2;
+		}
+	}
 }
 
 void handle_tick(AppContextRef ctx, PebbleTickEvent *evt) {
