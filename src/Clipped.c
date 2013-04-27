@@ -28,7 +28,7 @@ PBL_APP_INFO(MY_UUID,
 
 #define USDATE false
 #define WEEKDAY true
-#define LANG_CUR LANG_ENGLISH
+#define LANG_CUR LANG_SPANISH
 
 
 const int hourImage[10] = {
@@ -39,11 +39,11 @@ const int hourImage[10] = {
 
 
 const char weekDay[LANG_MAX][7][2] = {
-	{ "Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za" },	// Dutch
-	{ "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" },	// English
-	{ "Di", "Lu", "Ma", "Me", "Je", "Ve", "Sa" },	// French
-	{ "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" },	// German
-	{ "Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa" }	// Spanish
+	{ "zo", "ma", "di", "wo", "do", "vr", "za" },	// Dutch
+	{ "su", "mo", "tu", "we", "th", "fr", "sa" },	// English
+	{ "di", "lu", "ma", "me", "je", "ve", "sa" },	// French
+	{ "so", "mo", "di", "mi", "do", "fr", "sa" },	// German
+	{ "do", "lu", "ma", "mi", "ju", "vi", "sa" }	// Spanish
 };
 
 Window window;
@@ -123,6 +123,7 @@ void setHM(PblTm *tm) {
 			date[4] = '0' + (char)M2;
 		}
 	}
+    text_layer_set_text(&dateLayer, date);
 }
 
 void handle_tick(AppContextRef ctx, PebbleTickEvent *evt) {
@@ -170,7 +171,7 @@ void handle_init(AppContextRef ctx) {
     text_layer_set_text_alignment(&dateLayer, GTextAlignmentCenter);
     text_layer_set_text_color(&dateLayer, GColorWhite);
     text_layer_set_text(&dateLayer, date);
-    layer_add_child(&bgLayer, &dateLayer.layer);
+    layer_add_child(&window.layer, &dateLayer.layer);
 }
 
 void handle_deinit(AppContextRef ctx) {
