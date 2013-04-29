@@ -11,7 +11,7 @@
      {
      "type":     "font",
      "defName":  "FONT_BORIS_40",
-     "file":     "fonts/BorisBlackBloxx.ttf"
+     "file":     "fonts/BorisBlackBloxx-subset.ttf"
      },
      {
      "type":     "png",

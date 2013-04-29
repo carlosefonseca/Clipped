@@ -38,12 +38,12 @@ const int hourImage[10] = {
 };
 
 
-const char weekDay[LANG_MAX][7][2] = {
-	{ "zo", "ma", "di", "wo", "do", "vr", "za" },	// Dutch
-	{ "su", "mo", "tu", "we", "th", "fr", "sa" },	// English
-	{ "di", "lu", "ma", "me", "je", "ve", "sa" },	// French
-	{ "so", "mo", "di", "mi", "do", "fr", "sa" },	// German
-	{ "do", "lu", "ma", "mi", "ju", "vi", "sa" }	// Spanish
+const char weekDay[LANG_MAX][7][3] = {
+	{ "zon", "maa", "din", "woe", "don", "vri", "zat" },	// Dutch
+	{ "sun", "mon", "tue", "wed", "thu", "fri", "sat" },	// English
+	{ "dim", "lun", "mar", "mer", "jeu", "ven", "sam" },	// French
+	{ "son", "mon", "die", "mit", "don", "fre", "sam" },	// German
+	{ "dom", "lun", "mar", "mie", "jue", "vie", "sab" }		// Spanish
 };
 
 Window window;
@@ -51,7 +51,7 @@ Layer bgLayer;
 TextLayer minuteLayer[5], dateLayer;
 GFont minuteFont;
 char minutes[] = "01";
-char date[] = "01 34";
+char date[] = "012 45";
 int h1, h2, m1, m2, D1, D2, M1, M2, wd;
 bool clock12 = false;
 int dx[5] = { -1, 1, 1, -1, 0 };
@@ -108,8 +108,9 @@ void setHM(PblTm *tm) {
 	if (WEEKDAY) {
 			date[0] = weekDay[LANG_CUR][wd][0];
 			date[1] = weekDay[LANG_CUR][wd][1];
-			date[3] = '0' + (char)D1;
-			date[4] = '0' + (char)D2;
+			date[2] = weekDay[LANG_CUR][wd][2];
+			date[4] = '0' + (char)D1;
+			date[5] = '0' + (char)D2;
 	} else {
 		if (USDATE) {
 			date[0] = '0' + (char)M1;
@@ -122,6 +123,7 @@ void setHM(PblTm *tm) {
 			date[3] = '0' + (char)M1;
 			date[4] = '0' + (char)M2;
 		}
+		date[5] = (char)0;
 	}
     text_layer_set_text(&dateLayer, date);
 }
@@ -165,7 +167,7 @@ void handle_init(AppContextRef ctx) {
     	layer_add_child(&bgLayer, &minuteLayer[i].layer);
 	}
 
-    text_layer_init(&dateLayer, GRect(0, 134, SCREENW, TEXTH));
+    text_layer_init(&dateLayer, GRect(-20, 134, SCREENW+40, TEXTH));
     text_layer_set_background_color(&dateLayer, GColorClear);
     text_layer_set_font(&dateLayer, minuteFont);
     text_layer_set_text_alignment(&dateLayer, GTextAlignmentCenter);
