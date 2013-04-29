@@ -15,52 +15,52 @@
      },
      {
      "type":     "png",
-     "defName":  "IMAGE_H0",
+     "defName":  "IMAGE_D0",
      "file":     "images/h0.png"
      },
      {
      "type":     "png",
-     "defName":  "IMAGE_H1",
+     "defName":  "IMAGE_D1",
      "file":     "images/h1.png"
      },
      {
      "type":     "png",
-     "defName":  "IMAGE_H2",
+     "defName":  "IMAGE_D2",
      "file":     "images/h2.png"
      },
      {
      "type":     "png",
-     "defName":  "IMAGE_H3",
+     "defName":  "IMAGE_D3",
      "file":     "images/h3.png"
      },
      {
      "type":     "png",
-     "defName":  "IMAGE_H4",
+     "defName":  "IMAGE_D4",
      "file":     "images/h4.png"
      },
      {
      "type":     "png",
-     "defName":  "IMAGE_H5",
+     "defName":  "IMAGE_D5",
      "file":     "images/h5.png"
      },
      {
      "type":     "png",
-     "defName":  "IMAGE_H6",
+     "defName":  "IMAGE_D6",
      "file":     "images/h6.png"
      },
      {
      "type":     "png",
-     "defName":  "IMAGE_H7",
+     "defName":  "IMAGE_D7",
      "file":     "images/h7.png"
      },
      {
      "type":     "png",
-     "defName":  "IMAGE_H8",
+     "defName":  "IMAGE_D8",
      "file":     "images/h8.png"
      },
      {
      "type":     "png",
-     "defName":  "IMAGE_H9",
+     "defName":  "IMAGE_D9",
      "file":     "images/h9.png"
      }
      ]
