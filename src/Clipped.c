@@ -15,7 +15,7 @@ PBL_APP_INFO(MY_UUID,
 #define SCREENW 144
 #define SCREENH 168
 #define TEXTX 1
-#define TEXTY 93
+#define TEXTY 96
 #define TEXTW 142
 #define TEXTH 60
 
@@ -31,7 +31,6 @@ PBL_APP_INFO(MY_UUID,
 #define WEEKDAY true
 #define SMALLDIGITS_WHITE false
 #define LANG_CUR LANG_ENGLISH
-
 
 const int digitImage[10] = {
     RESOURCE_ID_IMAGE_D0, RESOURCE_ID_IMAGE_D1, RESOURCE_ID_IMAGE_D2, RESOURCE_ID_IMAGE_D3,
@@ -62,14 +61,14 @@ Layer bgLayer;
 bigDigit bigSlot[2];
 TextLayer smallDigitLayer[5], dateLayer;
 GFont customFont;
-char smallDigits[] = "01";
-char date[] = "012 45";
+char smallDigits[] = "00";
+char date[] = "000000";
 int h1, h2, m1, m2, D1, D2, M1, M2, wd;
 bool clock12 = false;
 int dx[5] = { -2, 2, 2, -2, 0 };
 int dy[5] = { -2, -2, 2, 2, 0 };
 GColor textColor[5] = { GColorWhite, GColorWhite, GColorWhite, GColorWhite, GColorBlack };
-PblTm now, last = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+PblTm now, last = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 
 void updateLayer(Layer *layer, GContext* ctx) {
     int i, width = 8;
@@ -194,7 +193,7 @@ void handle_init(AppContextRef ctx) {
     
     resource_init_current_app(&APP_RESOURCES);
 
-    customFont = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BORIS_40));
+    customFont = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BORIS_37));
     
 	clock12 = !clock_is_24h_style();
 

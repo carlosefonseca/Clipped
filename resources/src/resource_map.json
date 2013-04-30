@@ -10,7 +10,8 @@
      },
      {
      "type":     "font",
-     "defName":  "FONT_BORIS_40",
+	 "characterRegex": "[ 0-9a-z]",
+     "defName":  "FONT_BORIS_37",
      "file":     "fonts/BorisBlackBloxx-subset.ttf"
      },
      {
