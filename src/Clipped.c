@@ -6,7 +6,7 @@
 #define MY_UUID { 0xB4, 0x6D, 0x25, 0x42, 0x6F, 0x7D, 0x46, 0x2C, 0x87, 0x9B, 0xE2, 0x1A, 0xE0, 0xDD, 0x69, 0xEF }
 PBL_APP_INFO(MY_UUID,
              "Clipped", "Jnm",
-             1, 3, /* App version */
+             1, 4, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON,
              APP_INFO_WATCH_FACE);
 
@@ -15,7 +15,7 @@ PBL_APP_INFO(MY_UUID,
 #define SCREENW 144
 #define SCREENH 168
 #define TEXTX 1
-#define TEXTY 95
+#define TEXTY 93
 #define TEXTW 142
 #define TEXTH 60
 
@@ -26,10 +26,11 @@ PBL_APP_INFO(MY_UUID,
 #define LANG_SPANISH 4
 #define LANG_MAX 5
 
-#define BIGMINUTES false
+#define BIGMINUTES true
 #define USDATE false
 #define WEEKDAY true
-#define LANG_CUR LANG_FRENCH
+#define SMALLDIGITS_WHITE false
+#define LANG_CUR LANG_ENGLISH
 
 
 const int digitImage[10] = {
@@ -47,128 +48,141 @@ const char weekDay[LANG_MAX][7][3] = {
 	{ "dom", "lun", "mar", "mie", "jue", "vie", "sab" }		// Spanish
 };
 
+typedef struct {
+    Layer layer;
+    int pos;
+    BmpContainer bmpContainer;
+    GRect frame;
+    int curDigit;
+    int prevDigit;
+} bigDigit;
+
 Window window;
 Layer bgLayer;
-TextLayer minuteLayer[5], dateLayer;
+bigDigit bigSlot[2];
+TextLayer smallDigitLayer[5], dateLayer;
 GFont customFont;
 char smallDigits[] = "01";
 char date[] = "012 45";
 int h1, h2, m1, m2, D1, D2, M1, M2, wd;
 bool clock12 = false;
-int dx[5] = { -1, 1, 1, -1, 0 };
-int dy[5] = { -1, -1, 1, 1, 0 };
+int dx[5] = { -2, 2, 2, -2, 0 };
+int dy[5] = { -2, -2, 2, 2, 0 };
 GColor textColor[5] = { GColorWhite, GColorWhite, GColorWhite, GColorWhite, GColorBlack };
-BmpContainer digitBmpContainer[2];
 PblTm now, last = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-void updateLayer(Layer *me, GContext* ctx) {
-    GRect frameH1, frameH2;
-    int width, d1, d2;
+void updateLayer(Layer *layer, GContext* ctx) {
+    int i, width = 8;
 
-	if (BIGMINUTES) {
-		d1 = m1;
-		d2 = m2;
-	} else {
-		d1 = h1;
-		d2 = h2;
-	}
-    
-	bmp_init_container(digitImage[d1], &digitBmpContainer[0]);
-	bmp_init_container(digitImage[d2], &digitBmpContainer[1]);
+    for (i=0; i<2; i++) {
+        if (bigSlot[i].curDigit != bigSlot[i].prevDigit) {
+            layer_remove_from_parent(&bigSlot[i].bmpContainer.layer.layer);
+            bmp_deinit_container(&bigSlot[i].bmpContainer);
+            bmp_init_container(digitImage[bigSlot[i].curDigit], &bigSlot[i].bmpContainer);
+            bigSlot[i].frame = layer_get_frame(&bigSlot[i].bmpContainer.layer.layer);
+        }
+        width += bigSlot[i].frame.size.w;
+    }
 
-    frameH1 = layer_get_frame(&digitBmpContainer[0].layer.layer);
-    frameH2 = layer_get_frame(&digitBmpContainer[1].layer.layer);
-    width = frameH1.size.w + frameH2.size.w + 8;
-    
-    // tens digit
-    frameH1.origin.x = CX - width/2;
-    frameH1.origin.y = 1;
-    graphics_draw_bitmap_in_rect(ctx, &digitBmpContainer[0].bmp, frameH1);
-    
-    // units digit
-    frameH2.origin.x = frameH1.origin.x + frameH1.size.w + 4;
-    frameH2.origin.y = 1;
-    graphics_draw_bitmap_in_rect(ctx, &digitBmpContainer[1].bmp, frameH2);
+    bigSlot[0].frame.origin.x = CX - width/2;
+    bigSlot[1].frame.origin.x = bigSlot[0].frame.origin.x + bigSlot[0].frame.size.w + 4;
 
-	bmp_deinit_container(&digitBmpContainer[0]);
-	bmp_deinit_container(&digitBmpContainer[1]);
+    for (i=0; i<2; i++) {
+        layer_set_frame(&bigSlot[i].layer, bigSlot[i].frame);
+        if (bigSlot[i].curDigit != bigSlot[i].prevDigit) {
+            layer_add_child(&bigSlot[i].layer, &bigSlot[i].bmpContainer.layer.layer);
+        }
+    }
 }
 
 void setHM(PblTm *tm) {
-	int h;
+	int h, i;
 	
 	if (tm->tm_hour != last.tm_hour) {
 		h= tm->tm_hour;
-			if (clock12) {
-				h = h%12;
+        if (clock12) {
+            h = h%12;
 			if (h == 0) {
 				h = 12;
 			}
 		}
-    	h1 = h/10;
-    	h2 = h%10;
+        bigSlot[0].prevDigit = bigSlot[0].curDigit;
+        bigSlot[1].prevDigit = bigSlot[1].curDigit;
+        h1 = h/10;
+        h2 = h%10;
 		if (BIGMINUTES) {
     		smallDigits[0] = '0' + (char)h1;
     		smallDigits[1] = '0' + (char)h2;
-		}
+            for (i=0; i<5; i++) {
+                text_layer_set_text(&smallDigitLayer[i], smallDigits);
+            }
+		} else {
+            bigSlot[0].curDigit = h1;
+            bigSlot[1].curDigit = h2;
+            layer_mark_dirty(&bgLayer);
+        }
 	}
 
 	if (tm->tm_min != last.tm_min) {
     	m1 = tm->tm_min/10;
     	m2 = tm->tm_min%10;
-		if (!BIGMINUTES) {
+		if (BIGMINUTES) {
+            bigSlot[0].curDigit = m1;
+            bigSlot[1].curDigit = m2;
+            layer_mark_dirty(&bgLayer);
+        } else {
     		smallDigits[0] = '0' + (char)m1;
     		smallDigits[1] = '0' + (char)m2;
+            for (i=0; i<5; i++) {
+                text_layer_set_text(&smallDigitLayer[i], smallDigits);
+            }
 		}
 	}
 
 	if (tm->tm_mday != last.tm_mday) {
     	D1 = tm->tm_mday/10;
     	D2 = tm->tm_mday%10;
-	}
 
-	if (tm->tm_mon != last.tm_mon) {
-    	M1 = (tm->tm_mon+1)/10;
-    	M2 = (tm->tm_mon+1)%10;
-	}
+		if (tm->tm_mon != last.tm_mon) {
+            M1 = (tm->tm_mon+1)/10;
+            M2 = (tm->tm_mon+1)%10;
+        }
+        
+        if (tm->tm_wday != last.tm_wday) {
+            wd = tm->tm_wday;
+        }
 
-	if (tm->tm_wday != last.tm_wday) {
-		wd = tm->tm_wday;
-	}
-
-
-	if (WEEKDAY) {
-			date[0] = weekDay[LANG_CUR][wd][0];
-			date[1] = weekDay[LANG_CUR][wd][1];
-			date[2] = weekDay[LANG_CUR][wd][2];
-			date[3] = ' ';
-			date[4] = '0' + (char)D1;
-			date[5] = '0' + (char)D2;
-	} else {
-		if (USDATE) {
-			date[0] = '0' + (char)M1;
-			date[1] = '0' + (char)M2;
-			date[2] = ' ';
-			date[3] = '0' + (char)D1;
-			date[4] = '0' + (char)D2;
-		} else {
-			date[0] = '0' + (char)D1;
-			date[1] = '0' + (char)D2;
-			date[2] = ' ';
-			date[3] = '0' + (char)M1;
-			date[4] = '0' + (char)M2;
-		}
-		date[5] = (char)0;
-	}
-    text_layer_set_text(&dateLayer, date);
+        if (WEEKDAY) {
+                date[0] = weekDay[LANG_CUR][wd][0];
+                date[1] = weekDay[LANG_CUR][wd][1];
+                date[2] = weekDay[LANG_CUR][wd][2];
+                date[3] = ' ';
+                date[4] = '0' + (char)D1;
+                date[5] = '0' + (char)D2;
+        } else {
+            if (USDATE) {
+                date[0] = '0' + (char)M1;
+                date[1] = '0' + (char)M2;
+                date[2] = ' ';
+                date[3] = '0' + (char)D1;
+                date[4] = '0' + (char)D2;
+            } else {
+                date[0] = '0' + (char)D1;
+                date[1] = '0' + (char)D2;
+                date[2] = ' ';
+                date[3] = '0' + (char)M1;
+                date[4] = '0' + (char)M2;
+            }
+            date[5] = (char)0;
+        }
+        text_layer_set_text(&dateLayer, date);
+    }
 
 	last = now;
 }
 
 void handle_tick(AppContextRef ctx, PebbleTickEvent *evt) {
-    get_time(&now);
-	setHM(&now);
-    layer_mark_dirty(&bgLayer);
+	setHM(evt->tick_time);
 }
 
 void handle_init(AppContextRef ctx) {
@@ -184,26 +198,36 @@ void handle_init(AppContextRef ctx) {
     
 	clock12 = !clock_is_24h_style();
 
-    get_time(&now);
-	setHM(&now);
-
-    //layer_init(&bgLayer, window.layer.frame);
-    layer_init(&bgLayer, GRect(0, 0, 144, 138));
-    bgLayer.update_proc = &updateLayer;
+    layer_init(&bgLayer, GRect(0, 0, SCREENW, 138));
+    layer_set_update_proc(&bgLayer, &updateLayer);
     layer_add_child(&window.layer, &bgLayer);
     
+    for (i=0; i<2; i++) {
+        bigSlot[i].pos = i;
+        bigSlot[i].curDigit = -1;
+        layer_init(&bigSlot[i].layer, GRect(72*i, 0, 72, 138));
+        layer_add_child(&bgLayer, &bigSlot[i].layer);
+    }
+    
 	for (i=0; i<5; i++) {
-    	text_layer_init(&minuteLayer[i], GRect(TEXTX+dx[i], TEXTY+dy[i], TEXTW, TEXTH));
-    	text_layer_set_background_color(&minuteLayer[i], GColorClear);
-    	text_layer_set_font(&minuteLayer[i], customFont);
+    	text_layer_init(&smallDigitLayer[i], GRect(TEXTX+dx[i], TEXTY+dy[i], TEXTW, TEXTH));
+    	text_layer_set_background_color(&smallDigitLayer[i], GColorClear);
+    	text_layer_set_font(&smallDigitLayer[i], customFont);
 		if (BIGMINUTES) {
-    		text_layer_set_text_alignment(&minuteLayer[i], GTextAlignmentLeft);
+    		text_layer_set_text_alignment(&smallDigitLayer[i], GTextAlignmentLeft);
 		} else {
-    		text_layer_set_text_alignment(&minuteLayer[i], GTextAlignmentRight);
+    		text_layer_set_text_alignment(&smallDigitLayer[i], GTextAlignmentRight);
 		}
-    	text_layer_set_text_color(&minuteLayer[i], textColor[i]);
-    	text_layer_set_text(&minuteLayer[i], smallDigits);
-    	layer_add_child(&bgLayer, &minuteLayer[i].layer);
+		if (SMALLDIGITS_WHITE) {
+			if (textColor[i] == GColorBlack) {
+				textColor[i] = GColorWhite;
+			} else {
+				textColor[i] = GColorBlack;
+			}
+		}
+    	text_layer_set_text_color(&smallDigitLayer[i], textColor[i]);
+    	text_layer_set_text(&smallDigitLayer[i], smallDigits);
+    	layer_add_child(&window.layer, &smallDigitLayer[i].layer);
 	}
 
     text_layer_init(&dateLayer, GRect(-20, 134, SCREENW+40, TEXTH));
@@ -213,11 +237,14 @@ void handle_init(AppContextRef ctx) {
     text_layer_set_text_color(&dateLayer, GColorWhite);
     text_layer_set_text(&dateLayer, date);
     layer_add_child(&window.layer, &dateLayer.layer);
+
+    get_time(&now);
+	setHM(&now);
 }
 
 void handle_deinit(AppContextRef ctx) {
-    bmp_deinit_container(&digitBmpContainer[0]);
-    bmp_deinit_container(&digitBmpContainer[1]);
+    bmp_deinit_container(&bigSlot[0].bmpContainer);
+    bmp_deinit_container(&bigSlot[1].bmpContainer);
     fonts_unload_custom_font(customFont);
 }
 
