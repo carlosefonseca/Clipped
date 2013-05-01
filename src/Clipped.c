@@ -162,6 +162,8 @@ void updateBigDigits(int val) {
             layer_add_child(&bigSlot[i].layer, &bigSlot[i].bmpContainer.layer.layer);
         }
     }
+    // Claim for a redraw
+    layer_mark_dirty(&bgLayer);
 }
 
 void updateSmallDigits(int val) {
@@ -196,8 +198,6 @@ void setHM(PblTm *tm) {
 #else
         // Set big digits to hours
         updateBigDigits(h);
-        // Claim for a redraw
-        layer_mark_dirty(&bgLayer);
 #endif
 	}
 
@@ -205,8 +205,6 @@ void setHM(PblTm *tm) {
 #if BIGMINUTES
         // Set big digits to minutes
         updateBigDigits(tm->tm_min);
-        // Claim for a redraw
-        layer_mark_dirty(&bgLayer);
 #else
         // Set small digits string to minutes
         updateSmallDigits(tm->tm_min);
