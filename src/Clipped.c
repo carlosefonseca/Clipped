@@ -10,15 +10,10 @@ PBL_APP_INFO(MY_UUID,
              RESOURCE_ID_IMAGE_MENU_ICON,
              APP_INFO_WATCH_FACE);
 
-#define CX 72
-#define CY 84
-#define SCREENW 144
-#define SCREENH 168
-#define TEXTX 1
-#define TEXTY 96
-#define TEXTW 142
-#define TEXTH 60
+#define TRUE  1
+#define FALSE 0
 
+// Languages
 #define LANG_DUTCH 0
 #define LANG_ENGLISH 1
 #define LANG_FRENCH 2
@@ -26,74 +21,140 @@ PBL_APP_INFO(MY_UUID,
 #define LANG_SPANISH 4
 #define LANG_MAX 5
 
-#define BIGMINUTES true
-#define USDATE false
-#define WEEKDAY true
-#define SMALLDIGITS_WHITE false
+// Compilation flags
+// Show minutes as the big digits instead of hours
+#define BIGMINUTES TRUE
+// Shows the date is US format mm/dd instead of dd/mm
+#define USDATE FALSE
+// Shows the date as day of week/month instead of dd/mm or mm/dd
+#define WEEKDAY TRUE
+// Displays the small digits in white instead of black
+#define SMALLDIGITS_WHITE FALSE
+// Language for the day of the week
 #define LANG_CUR LANG_ENGLISH
 
+// Screen dimensions
+#define SCREENW 144
+#define SCREENH 168
+#define CX      72
+#define CY      84
+
+// Date Layer Frame
+#define TEXTX 1
+#define TEXTY 96
+#define TEXTW 142
+#define TEXTH 60
+
+// Space between big digits
+#define BIGDIGITS_PADDING 6
+
+
+// IDs of the images for the big digits
 const int digitImage[10] = {
     RESOURCE_ID_IMAGE_D0, RESOURCE_ID_IMAGE_D1, RESOURCE_ID_IMAGE_D2, RESOURCE_ID_IMAGE_D3,
     RESOURCE_ID_IMAGE_D4, RESOURCE_ID_IMAGE_D5, RESOURCE_ID_IMAGE_D6, RESOURCE_ID_IMAGE_D7,
     RESOURCE_ID_IMAGE_D8, RESOURCE_ID_IMAGE_D9
 };
 
-
-const char weekDay[LANG_MAX][7][3] = {
-	{ "zon", "maa", "din", "woe", "don", "vri", "zat" },	// Dutch
-	{ "sun", "mon", "tue", "wed", "thu", "fri", "sat" },	// English
-	{ "dim", "lun", "mar", "mer", "jeu", "ven", "sam" },	// French
-	{ "son", "mon", "die", "mit", "don", "fre", "sam" },	// German
-	{ "dom", "lun", "mar", "mie", "jue", "vie", "sab" }		// Spanish
+// Days of the week in all languages
+const char weekDay[7][3] = {
+#if LANG_CUR == LANG_DUTCH
+	"zon", "maa", "din", "woe", "don", "vri", "zat"	// Dutch
+#elif LANG_CUR == LANG_ENGLISH
+	"sun", "mon", "tue", "wed", "thu", "fri", "sat"	// English
+#elif LANG_CUR == LANG_FRENCH
+	"dim", "lun", "mar", "mer", "jeu", "ven", "sam"	// French
+#elif LANG_CUR == LANG_GERMAN
+	"son", "mon", "die", "mit", "don", "fre", "sam"	// German
+#elif LANG_CUR == LANG_SPANISH
+	"dom", "lun", "mar", "mie", "jue", "vie", "sab"	// Spanish
+#else // Fallback to debug strings
+	"abc", "def", "ghi", "klm", "nop", "qrs", "tuv"	// Debug
+#endif
 };
 
+// Structure to hold informations for the two big digits
 typedef struct {
+    // the Layer for the digit
     Layer layer;
-    int pos;
+    // the image of the digit to be displayed
     BmpContainer bmpContainer;
+    // the frame in which the layer is positionned
     GRect frame;
+    // Current digit to display
     int curDigit;
+    // Previous digit displayed
     int prevDigit;
 } bigDigit;
 
+// Main window
 Window window;
+// Background layer which will receive the update events
 Layer bgLayer;
+// the two big digits structures
 bigDigit bigSlot[2];
+// TextLayers for the small digits and the date
+// There are 5 layers for the small digits to simulate outliningof the font (4 layers to the back & 1 to the front)
 TextLayer smallDigitLayer[5], dateLayer;
+// The custom font
 GFont customFont;
+// String for the small digits
 char smallDigits[] = "00";
+// String for the date
 char date[] = "000000";
+// various compute variables
 int h1, h2, m1, m2, D1, D2, M1, M2, wd;
+// Is clock in 12h format ?
 bool clock12 = false;
+// x&y offsets for the 5 TextLayers for the small digits to simulate outlining
 int dx[5] = { -2, 2, 2, -2, 0 };
 int dy[5] = { -2, -2, 2, 2, 0 };
+
+// Text colors for the 5 TextLayers, depending on SMALLDIGITS_WHITE
+#if SMALLDIGITS_WHITE
+GColor textColor[5] = { GColorBlack, GColorBlack, GColorBlack, GColorBlack, GColorWhite };
+#else
 GColor textColor[5] = { GColorWhite, GColorWhite, GColorWhite, GColorWhite, GColorBlack };
+#endif
+
+// Current and previous timestamps, last defined to -1 to be sure to update at launch
 PblTm now, last = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 
+// bgLayer update procedure
 void updateLayer(Layer *layer, GContext* ctx) {
-    int i, width = 8;
+    int i, width = BIGDIGITS_PADDING; // padding between the two big digits
 
+    // foreach big digit slot
     for (i=0; i<2; i++) {
         if (bigSlot[i].curDigit != bigSlot[i].prevDigit) {
+            // if the digit has changed, remove image layer, deinit it, then init with new digit
             layer_remove_from_parent(&bigSlot[i].bmpContainer.layer.layer);
             bmp_deinit_container(&bigSlot[i].bmpContainer);
             bmp_init_container(digitImage[bigSlot[i].curDigit], &bigSlot[i].bmpContainer);
             bigSlot[i].frame = layer_get_frame(&bigSlot[i].bmpContainer.layer.layer);
         }
+        // Calculate the total width of the two digits so to center them afterwards:
+        // they can be different widths so they're not aligned to the center of the screen
         width += bigSlot[i].frame.size.w;
     }
 
+    // Offset the first digit to the left of half the calculated width starting from the middle of the screen
     bigSlot[0].frame.origin.x = CX - width/2;
-    bigSlot[1].frame.origin.x = bigSlot[0].frame.origin.x + bigSlot[0].frame.size.w + 4;
+    // Offset the second digit to the right of the first one
+    bigSlot[1].frame.origin.x = bigSlot[0].frame.origin.x + bigSlot[0].frame.size.w + BIGDIGITS_PADDING;
 
+    // foreach big digit slot
     for (i=0; i<2; i++) {
+        // Apply offsets
         layer_set_frame(&bigSlot[i].layer, bigSlot[i].frame);
         if (bigSlot[i].curDigit != bigSlot[i].prevDigit) {
+            // if the digit has changed, add the image layer again
             layer_add_child(&bigSlot[i].layer, &bigSlot[i].bmpContainer.layer.layer);
         }
     }
 }
 
+// global time variables handler
 void setHM(PblTm *tm) {
 	int h, i;
 	
@@ -105,130 +166,154 @@ void setHM(PblTm *tm) {
 				h = 12;
 			}
 		}
+        // Backup previous digits, used to check if they changed
         bigSlot[0].prevDigit = bigSlot[0].curDigit;
         bigSlot[1].prevDigit = bigSlot[1].curDigit;
+        
+        // Hour digits
         h1 = h/10;
         h2 = h%10;
-		if (BIGMINUTES) {
-    		smallDigits[0] = '0' + (char)h1;
-    		smallDigits[1] = '0' + (char)h2;
-            for (i=0; i<5; i++) {
-                text_layer_set_text(&smallDigitLayer[i], smallDigits);
-            }
-		} else {
-            bigSlot[0].curDigit = h1;
-            bigSlot[1].curDigit = h2;
-            layer_mark_dirty(&bgLayer);
+#if BIGMINUTES
+        // Set small digits string to hours
+        smallDigits[0] = '0' + (char)h1;
+        smallDigits[1] = '0' + (char)h2;
+        for (i=0; i<5; i++) {
+            // Set small digits TextLayers's text, this triggers a redraw
+            text_layer_set_text(&smallDigitLayer[i], smallDigits);
         }
+#else
+        // Set big digits to hours
+        bigSlot[0].curDigit = h1;
+        bigSlot[1].curDigit = h2;
+        // Claim for a redraw
+        layer_mark_dirty(&bgLayer);
+#endif
 	}
 
 	if (tm->tm_min != last.tm_min) {
     	m1 = tm->tm_min/10;
     	m2 = tm->tm_min%10;
-		if (BIGMINUTES) {
-            bigSlot[0].curDigit = m1;
-            bigSlot[1].curDigit = m2;
-            layer_mark_dirty(&bgLayer);
-        } else {
-    		smallDigits[0] = '0' + (char)m1;
-    		smallDigits[1] = '0' + (char)m2;
-            for (i=0; i<5; i++) {
-                text_layer_set_text(&smallDigitLayer[i], smallDigits);
-            }
-		}
+#if BIGMINUTES
+        // Set big digits to minutes
+        bigSlot[0].curDigit = m1;
+        bigSlot[1].curDigit = m2;
+        // Claim for a redraw
+        layer_mark_dirty(&bgLayer);
+#else
+        // Set small digits string to minutes
+        smallDigits[0] = '0' + (char)m1;
+        smallDigits[1] = '0' + (char)m2;
+        for (i=0; i<5; i++) {
+            // Set small digits TextLayers's text, this triggers a redraw
+            text_layer_set_text(&smallDigitLayer[i], smallDigits);
+        }
+#endif
 	}
 
 	if (tm->tm_mday != last.tm_mday) {
+        // Date Layer string formatting
+        
+        // Get day of month
     	D1 = tm->tm_mday/10;
     	D2 = tm->tm_mday%10;
 
+        // Get month num
 		if (tm->tm_mon != last.tm_mon) {
             M1 = (tm->tm_mon+1)/10;
             M2 = (tm->tm_mon+1)%10;
         }
         
+        // Get day of week
         if (tm->tm_wday != last.tm_wday) {
             wd = tm->tm_wday;
         }
 
-        if (WEEKDAY) {
-                date[0] = weekDay[LANG_CUR][wd][0];
-                date[1] = weekDay[LANG_CUR][wd][1];
-                date[2] = weekDay[LANG_CUR][wd][2];
-                date[3] = ' ';
-                date[4] = '0' + (char)D1;
-                date[5] = '0' + (char)D2;
-        } else {
-            if (USDATE) {
-                date[0] = '0' + (char)M1;
-                date[1] = '0' + (char)M2;
-                date[2] = ' ';
-                date[3] = '0' + (char)D1;
-                date[4] = '0' + (char)D2;
-            } else {
-                date[0] = '0' + (char)D1;
-                date[1] = '0' + (char)D2;
-                date[2] = ' ';
-                date[3] = '0' + (char)M1;
-                date[4] = '0' + (char)M2;
-            }
-            date[5] = (char)0;
-        }
+#if WEEKDAY
+        // Day of week formatting : "www dd"
+        date[0] = weekDay[wd][0];
+        date[1] = weekDay[wd][1];
+        date[2] = weekDay[wd][2];
+        date[3] = ' ';
+        date[4] = '0' + (char)D1;
+        date[5] = '0' + (char)D2;
+        date[6] = (char)0;
+#else //WEEKDAY
+#if USDATE
+        // US date formatting : "mm dd"
+        date[0] = '0' + (char)M1;
+        date[1] = '0' + (char)M2;
+        date[2] = ' ';
+        date[3] = '0' + (char)D1;
+        date[4] = '0' + (char)D2;
+#else // USDATE
+        // EU date formatting : "dd mm"
+        date[0] = '0' + (char)D1;
+        date[1] = '0' + (char)D2;
+        date[2] = ' ';
+        date[3] = '0' + (char)M1;
+        date[4] = '0' + (char)M2;
+#endif // USDATE
+        date[5] = (char)0;
+#endif // WEEKDAY
+        // Set date TextLayers's text, this triggers a redraw
         text_layer_set_text(&dateLayer, date);
     }
 
+    // Backup current time
 	last = now;
 }
 
+// time event handler, triggered every minute
 void handle_tick(AppContextRef ctx, PebbleTickEvent *evt) {
 	setHM(evt->tick_time);
 }
 
+// init handler
 void handle_init(AppContextRef ctx) {
     int i;
    
+    // Main Window
     window_init(&window, "Clipped");
     window_stack_push(&window, true /* Animated */);
     window_set_background_color(&window, GColorBlack);
     
+    // Init resources
     resource_init_current_app(&APP_RESOURCES);
 
+    // Load custom font
     customFont = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BORIS_37));
     
+    // Set clock format
 	clock12 = !clock_is_24h_style();
 
+    // Big digits Background layer, used to trigger redraws
     layer_init(&bgLayer, GRect(0, 0, SCREENW, 138));
     layer_set_update_proc(&bgLayer, &updateLayer);
     layer_add_child(&window.layer, &bgLayer);
     
+    // Big digits structures & layers, childs of bgLayer
     for (i=0; i<2; i++) {
-        bigSlot[i].pos = i;
         bigSlot[i].curDigit = -1;
         layer_init(&bigSlot[i].layer, GRect(72*i, 0, 72, 138));
         layer_add_child(&bgLayer, &bigSlot[i].layer);
     }
     
+    // Small digits TextLayers
 	for (i=0; i<5; i++) {
     	text_layer_init(&smallDigitLayer[i], GRect(TEXTX+dx[i], TEXTY+dy[i], TEXTW, TEXTH));
     	text_layer_set_background_color(&smallDigitLayer[i], GColorClear);
     	text_layer_set_font(&smallDigitLayer[i], customFont);
-		if (BIGMINUTES) {
-    		text_layer_set_text_alignment(&smallDigitLayer[i], GTextAlignmentLeft);
-		} else {
-    		text_layer_set_text_alignment(&smallDigitLayer[i], GTextAlignmentRight);
-		}
-		if (SMALLDIGITS_WHITE) {
-			if (textColor[i] == GColorBlack) {
-				textColor[i] = GColorWhite;
-			} else {
-				textColor[i] = GColorBlack;
-			}
-		}
+#if BIGMINUTES
+        text_layer_set_text_alignment(&smallDigitLayer[i], GTextAlignmentLeft);
+#else
+        text_layer_set_text_alignment(&smallDigitLayer[i], GTextAlignmentRight);
+#endif
     	text_layer_set_text_color(&smallDigitLayer[i], textColor[i]);
     	text_layer_set_text(&smallDigitLayer[i], smallDigits);
     	layer_add_child(&window.layer, &smallDigitLayer[i].layer);
 	}
 
+    // Date TextLayer
     text_layer_init(&dateLayer, GRect(-20, 134, SCREENW+40, TEXTH));
     text_layer_set_background_color(&dateLayer, GColorClear);
     text_layer_set_font(&dateLayer, customFont);
@@ -237,16 +322,20 @@ void handle_init(AppContextRef ctx) {
     text_layer_set_text(&dateLayer, date);
     layer_add_child(&window.layer, &dateLayer.layer);
 
+    // Init with current time
     get_time(&now);
 	setHM(&now);
 }
 
+// deinit handler
 void handle_deinit(AppContextRef ctx) {
+    // Deallocate images & font resources
     bmp_deinit_container(&bigSlot[0].bmpContainer);
     bmp_deinit_container(&bigSlot[1].bmpContainer);
     fonts_unload_custom_font(customFont);
 }
 
+// Main
 void pbl_main(void *params) {
     PebbleAppHandlers handlers = {
         .init_handler = &handle_init,
