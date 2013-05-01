@@ -23,7 +23,7 @@ PBL_APP_INFO(MY_UUID,
 
 // Compilation flags
 // Show minutes as the big digits instead of hours
-#define BIGMINUTES TRUE
+#define BIGMINUTES FALSE
 // Shows the date is US format mm/dd instead of dd/mm
 #define USDATE FALSE
 // Shows the date as day of week/month instead of dd/mm or mm/dd
@@ -95,7 +95,8 @@ Layer bgLayer;
 bigDigit bigSlot[2];
 // TextLayers for the small digits and the date
 // There are 5 layers for the small digits to simulate outliningof the font (4 layers to the back & 1 to the front)
-TextLayer smallDigitLayer[5], dateLayer;
+#define SMALLDIGITSLAYERS_NUM 5
+TextLayer smallDigitLayer[SMALLDIGITSLAYERS_NUM], dateLayer;
 // The custom font
 GFont customFont;
 // String for the small digits
@@ -103,29 +104,38 @@ char smallDigits[] = "00";
 // String for the date
 char date[] = "000000";
 // various compute variables
-int h1, h2, m1, m2, D1, D2, M1, M2, wd;
+char D[2], M[2];
+int wd;
 // Is clock in 12h format ?
 bool clock12 = false;
-// x&y offsets for the 5 TextLayers for the small digits to simulate outlining
-int dx[5] = { -2, 2, 2, -2, 0 };
-int dy[5] = { -2, -2, 2, 2, 0 };
+// x&y offsets for the SMALLDIGITSLAYERS_NUM TextLayers for the small digits to simulate outlining
+int dx[SMALLDIGITSLAYERS_NUM] = { -2, 2, 2, -2, 0 };
+int dy[SMALLDIGITSLAYERS_NUM] = { -2, -2, 2, 2, 0 };
 
-// Text colors for the 5 TextLayers, depending on SMALLDIGITS_WHITE
+// Text colors for the SMALLDIGITSLAYERS_NUM TextLayers, depending on SMALLDIGITS_WHITE
 #if SMALLDIGITS_WHITE
-GColor textColor[5] = { GColorBlack, GColorBlack, GColorBlack, GColorBlack, GColorWhite };
+GColor textColor[SMALLDIGITSLAYERS_NUM] = { GColorBlack, GColorBlack, GColorBlack, GColorBlack, GColorWhite };
 #else
-GColor textColor[5] = { GColorWhite, GColorWhite, GColorWhite, GColorWhite, GColorBlack };
+GColor textColor[SMALLDIGITSLAYERS_NUM] = { GColorWhite, GColorWhite, GColorWhite, GColorWhite, GColorBlack };
 #endif
 
 // Current and previous timestamps, last defined to -1 to be sure to update at launch
 PblTm now, last = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 
-// bgLayer update procedure
-void updateLayer(Layer *layer, GContext* ctx) {
+// big digits update procedure
+void updateBigDigits(int val) {
     int i, width = BIGDIGITS_PADDING; // padding between the two big digits
+    int d[2];
 
+    d[0] = val/10;  // tens
+    d[1] = val%10;  // units
+    
     // foreach big digit slot
     for (i=0; i<2; i++) {
+        // Backup previous digits, used to check if they changed
+        bigSlot[i].prevDigit = bigSlot[i].curDigit;
+        bigSlot[i].curDigit = d[i];
+
         if (bigSlot[i].curDigit != bigSlot[i].prevDigit) {
             // if the digit has changed, remove image layer, deinit it, then init with new digit
             layer_remove_from_parent(&bigSlot[i].bmpContainer.layer.layer);
@@ -154,9 +164,21 @@ void updateLayer(Layer *layer, GContext* ctx) {
     }
 }
 
+void updateSmallDigits(int val) {
+    int i;
+
+    smallDigits[0] = '0' + (char)(val/10);
+    smallDigits[1] = '0' + (char)(val%10);
+    
+    for (i=0; i<SMALLDIGITSLAYERS_NUM; i++) {
+        // Set small digits TextLayers's text, this triggers a redraw
+        text_layer_set_text(&smallDigitLayer[i], smallDigits);
+    }
+}
+
 // global time variables handler
 void setHM(PblTm *tm) {
-	int h, i;
+	int h;
 	
 	if (tm->tm_hour != last.tm_hour) {
 		h= tm->tm_hour;
@@ -166,47 +188,28 @@ void setHM(PblTm *tm) {
 				h = 12;
 			}
 		}
-        // Backup previous digits, used to check if they changed
-        bigSlot[0].prevDigit = bigSlot[0].curDigit;
-        bigSlot[1].prevDigit = bigSlot[1].curDigit;
         
         // Hour digits
-        h1 = h/10;
-        h2 = h%10;
 #if BIGMINUTES
         // Set small digits string to hours
-        smallDigits[0] = '0' + (char)h1;
-        smallDigits[1] = '0' + (char)h2;
-        for (i=0; i<5; i++) {
-            // Set small digits TextLayers's text, this triggers a redraw
-            text_layer_set_text(&smallDigitLayer[i], smallDigits);
-        }
+        updateSmallDigits(h);
 #else
         // Set big digits to hours
-        bigSlot[0].curDigit = h1;
-        bigSlot[1].curDigit = h2;
+        updateBigDigits(h);
         // Claim for a redraw
         layer_mark_dirty(&bgLayer);
 #endif
 	}
 
 	if (tm->tm_min != last.tm_min) {
-    	m1 = tm->tm_min/10;
-    	m2 = tm->tm_min%10;
 #if BIGMINUTES
         // Set big digits to minutes
-        bigSlot[0].curDigit = m1;
-        bigSlot[1].curDigit = m2;
+        updateBigDigits(tm->tm_min);
         // Claim for a redraw
         layer_mark_dirty(&bgLayer);
 #else
         // Set small digits string to minutes
-        smallDigits[0] = '0' + (char)m1;
-        smallDigits[1] = '0' + (char)m2;
-        for (i=0; i<5; i++) {
-            // Set small digits TextLayers's text, this triggers a redraw
-            text_layer_set_text(&smallDigitLayer[i], smallDigits);
-        }
+        updateSmallDigits(tm->tm_min);
 #endif
 	}
 
@@ -214,13 +217,13 @@ void setHM(PblTm *tm) {
         // Date Layer string formatting
         
         // Get day of month
-    	D1 = tm->tm_mday/10;
-    	D2 = tm->tm_mday%10;
+    	D[0] = (char)(tm->tm_mday/10);
+    	D[1] = (char)(tm->tm_mday%10);
 
         // Get month num
 		if (tm->tm_mon != last.tm_mon) {
-            M1 = (tm->tm_mon+1)/10;
-            M2 = (tm->tm_mon+1)%10;
+            M[0] = (char)((tm->tm_mon+1)/10);
+            M[1] = (char)((tm->tm_mon+1)%10);
         }
         
         // Get day of week
@@ -234,24 +237,24 @@ void setHM(PblTm *tm) {
         date[1] = weekDay[wd][1];
         date[2] = weekDay[wd][2];
         date[3] = ' ';
-        date[4] = '0' + (char)D1;
-        date[5] = '0' + (char)D2;
+        date[4] = '0' + D[0];
+        date[5] = '0' + D[1];
         date[6] = (char)0;
 #else //WEEKDAY
 #if USDATE
         // US date formatting : "mm dd"
-        date[0] = '0' + (char)M1;
-        date[1] = '0' + (char)M2;
+        date[0] = '0' + M[0];
+        date[1] = '0' + M[1];
         date[2] = ' ';
-        date[3] = '0' + (char)D1;
-        date[4] = '0' + (char)D2;
+        date[3] = '0' + D[0];
+        date[4] = '0' + D[1];
 #else // USDATE
         // EU date formatting : "dd mm"
-        date[0] = '0' + (char)D1;
-        date[1] = '0' + (char)D2;
+        date[0] = '0' + D[0];
+        date[1] = '0' + D[1];
         date[2] = ' ';
-        date[3] = '0' + (char)M1;
-        date[4] = '0' + (char)M2;
+        date[3] = '0' + M[0];
+        date[4] = '0' + M[1];
 #endif // USDATE
         date[5] = (char)0;
 #endif // WEEKDAY
@@ -288,7 +291,7 @@ void handle_init(AppContextRef ctx) {
 
     // Big digits Background layer, used to trigger redraws
     layer_init(&bgLayer, GRect(0, 0, SCREENW, 138));
-    layer_set_update_proc(&bgLayer, &updateLayer);
+    //layer_set_update_proc(&bgLayer, &updateLayer);
     layer_add_child(&window.layer, &bgLayer);
     
     // Big digits structures & layers, childs of bgLayer
@@ -299,7 +302,7 @@ void handle_init(AppContextRef ctx) {
     }
     
     // Small digits TextLayers
-	for (i=0; i<5; i++) {
+	for (i=0; i<SMALLDIGITSLAYERS_NUM; i++) {
     	text_layer_init(&smallDigitLayer[i], GRect(TEXTX+dx[i], TEXTY+dy[i], TEXTW, TEXTH));
     	text_layer_set_background_color(&smallDigitLayer[i], GColorClear);
     	text_layer_set_font(&smallDigitLayer[i], customFont);
