@@ -6,7 +6,7 @@
 #define MY_UUID { 0xB4, 0x6D, 0x25, 0x42, 0x6F, 0x7D, 0x46, 0x2C, 0x87, 0x9B, 0xE2, 0x1A, 0xE0, 0xDD, 0x69, 0xEF }
 PBL_APP_INFO(MY_UUID,
              "Clipped", "Jnm",
-             1, 4, /* App version */
+             1, 6, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON,
              APP_INFO_WATCH_FACE);
 
@@ -30,6 +30,8 @@ PBL_APP_INFO(MY_UUID,
 #define WEEKDAY TRUE
 // Displays the small digits in white instead of black
 #define SMALLDIGITS_WHITE FALSE
+// Display date
+#define SHOW_DATE FALSE
 // Language for the day of the week
 #define LANG_CUR LANG_ENGLISH
 
@@ -48,6 +50,12 @@ PBL_APP_INFO(MY_UUID,
 // Space between big digits
 #define BIGDIGITS_PADDING 6
 
+
+#if SHOW_DATE
+	#define VOFFSET 0
+#else
+	#define VOFFSET 15
+#endif
 
 // IDs of the images for the big digits
 const int digitImage[10] = {
@@ -211,6 +219,7 @@ void setHM(PblTm *tm) {
 #endif
 	}
 
+#if SHOW_DATE
 	if (tm->tm_mday != last.tm_mday) {
         // Date Layer string formatting
         
@@ -259,7 +268,7 @@ void setHM(PblTm *tm) {
         // Set date TextLayers's text, this triggers a redraw
         text_layer_set_text(&dateLayer, date);
     }
-
+#endif // SHOW_DATE
     // Backup current time
 	last = now;
 }
@@ -288,20 +297,20 @@ void handle_init(AppContextRef ctx) {
 	clock12 = !clock_is_24h_style();
 
     // Big digits Background layer, used to trigger redraws
-    layer_init(&bgLayer, GRect(0, 0, SCREENW, 138));
-    //layer_set_update_proc(&bgLayer, &updateLayer);
+    layer_init(&bgLayer, GRect(0, VOFFSET, SCREENW, 168-VOFFSET));
     layer_add_child(&window.layer, &bgLayer);
     
     // Big digits structures & layers, childs of bgLayer
     for (i=0; i<2; i++) {
         bigSlot[i].curDigit = -1;
+
         layer_init(&bigSlot[i].layer, GRect(72*i, 0, 72, 138));
         layer_add_child(&bgLayer, &bigSlot[i].layer);
     }
     
     // Small digits TextLayers
 	for (i=0; i<SMALLDIGITSLAYERS_NUM; i++) {
-    	text_layer_init(&smallDigitLayer[i], GRect(TEXTX+dx[i], TEXTY+dy[i], TEXTW, TEXTH));
+    	text_layer_init(&smallDigitLayer[i], GRect(TEXTX+dx[i], VOFFSET+TEXTY+dy[i], TEXTW, TEXTH));
     	text_layer_set_background_color(&smallDigitLayer[i], GColorClear);
     	text_layer_set_font(&smallDigitLayer[i], customFont);
 #if BIGMINUTES
@@ -314,6 +323,7 @@ void handle_init(AppContextRef ctx) {
     	layer_add_child(&window.layer, &smallDigitLayer[i].layer);
 	}
 
+#if SHOW_DATE
     // Date TextLayer
     text_layer_init(&dateLayer, GRect(-20, 134, SCREENW+40, TEXTH));
     text_layer_set_background_color(&dateLayer, GColorClear);
@@ -322,7 +332,8 @@ void handle_init(AppContextRef ctx) {
     text_layer_set_text_color(&dateLayer, GColorWhite);
     text_layer_set_text(&dateLayer, date);
     layer_add_child(&window.layer, &dateLayer.layer);
-
+#endif
+	
     // Init with current time
     get_time(&now);
 	setHM(&now);
