@@ -6,7 +6,7 @@
 #define MY_UUID { 0xB4, 0x6D, 0x25, 0x42, 0x6F, 0x7D, 0x46, 0x2C, 0x87, 0x9B, 0xE2, 0x1A, 0xE0, 0xDD, 0x69, 0xEF }
 PBL_APP_INFO(MY_UUID,
              "Clipped", "Jnm",
-             1, 6, /* App version */
+             1, 8, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON,
              APP_INFO_WATCH_FACE);
 
@@ -27,7 +27,7 @@ PBL_APP_INFO(MY_UUID,
 // Shows the date is US format mm/dd instead of dd/mm
 #define USDATE FALSE
 // Shows the date as day of week/month instead of dd/mm or mm/dd
-#define WEEKDAY TRUE
+#define WEEKDAY FALSE
 // Displays the small digits in white instead of black
 #define SMALLDIGITS_WHITE FALSE
 // Display date
@@ -170,8 +170,6 @@ void updateBigDigits(int val) {
             layer_add_child(&bigSlot[i].layer, &bigSlot[i].bmpContainer.layer.layer);
         }
     }
-    // Claim for a redraw
-    layer_mark_dirty(&bgLayer);
 }
 
 void updateSmallDigits(int val) {
@@ -269,8 +267,12 @@ void setHM(PblTm *tm) {
         text_layer_set_text(&dateLayer, date);
     }
 #endif // SHOW_DATE
+	
+	// Claim for a redraw
+    //layer_mark_dirty(&bgLayer);
+
     // Backup current time
-	last = now;
+	last = *tm;
 }
 
 // time event handler, triggered every minute
