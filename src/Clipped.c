@@ -1,5 +1,4 @@
 #include <pebble.h>
-#include <time.h>
 
 #define TRUE  1
 #define FALSE 0
@@ -77,9 +76,11 @@ const char weekDay[7][3] = {
 // Structure to hold informations for the two big digits
 typedef struct {
     // the Layer for the digit
-    Layer layer;
+    Layer *layer;
+    // the bitmap
+    GBitmap * bmp;
     // the image of the digit to be displayed
-    BmpContainer bmpContainer;
+    BitmapLayer * bmpContainer;
     // the frame in which the layer is positionned
     GRect frame;
     // Current digit to display
@@ -121,9 +122,9 @@ GColor textColor[SMALLDIGITSLAYERS_NUM] = { GColorWhite, GColorWhite, GColorWhit
 #endif
 
 
-TODO: ??????
+// TODO: ??????
 // Current and previous timestamps, last defined to -1 to be sure to update at launch
-struct tm now, last = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+struct tm *now, last = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 
 // big digits update procedure
 void updateBigDigits(int val) {
@@ -141,10 +142,12 @@ void updateBigDigits(int val) {
 
         if (bigSlot[i].curDigit != bigSlot[i].prevDigit) {
             // if the digit has changed, remove image layer, deinit it, then init with new digit
-            layer_remove_from_parent(&bigSlot[i].bmpContainer.layer.layer);
-            bmp_deinit_container(&bigSlot[i].bmpContainer);
-            bmp_init_container(digitImage[bigSlot[i].curDigit], &bigSlot[i].bmpContainer);
-            bigSlot[i].frame = layer_get_frame(&bigSlot[i].bmpContainer.layer.layer);
+            layer_remove_from_parent(bitmap_layer_get_layer(bigSlot[i].bmpContainer));
+            bitmap_layer_destroy(bigSlot[i].bmpContainer);
+            bigSlot[i].bmp = gbitmap_create_with_resource(digitImage[bigSlot[i].curDigit]);
+            bigSlot[i].bmpContainer = bitmap_layer_create(bigSlot[i].bmp->bounds);
+//            bmp_init_container(digitImage[bigSlot[i].curDigit], &bigSlot[i].bmpContainer);
+            bigSlot[i].frame = layer_get_frame(bitmap_layer_get_layer(bigSlot[i].bmpContainer));
         }
         // Calculate the total width of the two digits so to center them afterwards:
         // they can be different widths so they're not aligned to the center of the screen
@@ -159,10 +162,10 @@ void updateBigDigits(int val) {
     // foreach big digit slot
     for (i=0; i<2; i++) {
         // Apply offsets
-        layer_set_frame(&bigSlot[i].layer, bigSlot[i].frame);
+        layer_set_frame(bigSlot[i].layer, bigSlot[i].frame);
         if (bigSlot[i].curDigit != bigSlot[i].prevDigit) {
             // if the digit has changed, add the image layer again
-            layer_add_child(&bigSlot[i].layer, &bigSlot[i].bmpContainer.layer.layer);
+            layer_add_child(bigSlot[i].layer, bigSlot[i].bmpContainer.layer.layer);
         }
     }
 }
@@ -180,11 +183,11 @@ void updateSmallDigits(int val) {
 }
 
 // global time variables handler
-void setHM(PblTm *tm) {
+void setHM(struct tm* t) {
   int h;
   
-  if (tm->tm_hour != last.tm_hour) {
-    h= tm->tm_hour;
+  if (t->tm_hour != last.tm_hour) {
+    h= t->tm_hour;
         if (clock12) {
             h = h%12;
       if (h == 0) {
@@ -202,33 +205,33 @@ void setHM(PblTm *tm) {
 #endif
   }
 
-  if (tm->tm_min != last.tm_min) {
+  if (t->tm_min != last.tm_min) {
 #if BIGMINUTES
         // Set big digits to minutes
-        updateBigDigits(tm->tm_min);
+        updateBigDigits(t->tm_min);
 #else
         // Set small digits string to minutes
-        updateSmallDigits(tm->tm_min);
+        updateSmallDigits(t->tm_min);
 #endif
   }
 
 #if SHOW_DATE
-  if (tm->tm_mday != last.tm_mday) {
+  if (t->tm_mday != last.tm_mday) {
         // Date Layer string formatting
         
         // Get day of month
-      D[0] = (char)(tm->tm_mday/10);
-      D[1] = (char)(tm->tm_mday%10);
+      D[0] = (char)(t->tm_mday/10);
+      D[1] = (char)(t->tm_mday%10);
 
         // Get month num
-    if (tm->tm_mon != last.tm_mon) {
-            M[0] = (char)((tm->tm_mon+1)/10);
-            M[1] = (char)((tm->tm_mon+1)%10);
+    if (t->tm_mon != last.tm_mon) {
+            M[0] = (char)((t->tm_mon+1)/10);
+            M[1] = (char)((t->tm_mon+1)%10);
         }
         
         // Get day of week
-        if (tm->tm_wday != last.tm_wday) {
-            wd = tm->tm_wday;
+        if (t->tm_wday != last.tm_wday) {
+            wd = t->tm_wday;
         }
 
 #if WEEKDAY
@@ -267,13 +270,13 @@ void setHM(PblTm *tm) {
     //layer_mark_dirty(&bgLayer);
 
     // Backup current time
-  last = *tm;
+  last = *t;
 }
 
 // time event handler, triggered every minute
 // void handle_tick(AppContextRef ctx, PebbleTickEvent *evt) {
-static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
-  APP_LOG(APP_LOG_VERBOSE, "Time flies!");
+static void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
+  // APP_LOG(APP_LOG_VERBOSE, "Time flies!");
   setHM(tick_time);
 }
 
@@ -288,7 +291,7 @@ void handle_init() {
     window_set_background_color(&window, GColorBlack);
     
     // Init resources
-    resource_init_current_app(&APP_RESOURCES);
+    // resource_init_current_app(&APP_RESOURCES);
 
     // Load custom font
     customFont = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BORIS_37));
@@ -334,10 +337,10 @@ void handle_init() {
     layer_add_child(&window.layer, &dateLayer.layer);
 #endif
   
-  get_time() is replaced by . This lets you convert a timestamp into a struct.
+  // get_time() is replaced by . This lets you convert a timestamp into a struct.
     // Init with current time
     now = localtime(time(NULL));
-  setHM(&now);
+    setHM(now);
 }
 
 // deinit handler
@@ -390,7 +393,7 @@ void handle_deinit() {
 int main(void) {
   handle_init();
 
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Done initializing, pushed window: %p", window);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Done initializing, pushed window: %p", window);
 
   tick_timer_service_subscribe(MINUTE_UNIT, handle_minute_tick);
 
